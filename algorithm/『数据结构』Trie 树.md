@@ -1,5 +1,7 @@
 # 『数据结构』Trie 树
 
+模板题：[Trie 字符串统计](https://www.acwing.com/problem/content/837/)
+
 ```c++
 // 0号点既是根节点，又是空节点
 // son[][]存储树中每个节点的子节点
