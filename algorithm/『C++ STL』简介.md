@@ -103,3 +103,44 @@ bitset, 圧位
     flip(k) 把第k位取反
 ```
 
+
+
+## pair
+
+
+
+## vector
+
+
+
+## string
+
+
+
+## deque
+
+
+
+## priority_queue
+
+
+
+## queue
+
+
+
+## stack
+
+
+
+
+
+## 基于平衡二叉树（红黑树）的容器
+
+
+
+## 基于哈希表的容器
+
+
+
+## bitset
