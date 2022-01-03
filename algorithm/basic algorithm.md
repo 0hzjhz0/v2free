@@ -7,38 +7,41 @@ void quick_sort(int q[], int l, int r)
 {
     if (l >= r) return;
     
-    int x = q[l], i = l - 1, j = r + 1;
-    while(i < j) {
-        do i++; while(q[i] < x);
-        do j--; while(q[j] > x);
+    int x = q[l + r >> 1], i = l - 1, j = r + 1;
+    while(i < j)
+    {
+        do i ++; while(q[i] < x);
+        do j --; while(q[j] > x);
         if (i < j) swap(q[i], q[j]);
-        
-        quick_sort(q, l, j);
-        quick_sort(q, j + 1, r);
     }
+    quick_sort(q, l, j);
+    quick_sort(q, j + 1, r);
 }
 ```
 
 ## merge sort
 
 ```c++
-void merge_sort(int q[], int l, int r) 
+const int N = 1e5 + 10;
+int q[N], tmp[N];
+
+void merge_sort(int q[], int l, int r)
 {
-    if (l >= r—) return;
-    
+    if (l >= r) return;
     int mid = l + r >> 1;
-    
-    merge_sort(q, l, mid), merge_sort(q, mid + 1， r);
+    merge_sort(q, l, mid);
+    merge_sort(q, mid + 1, r);
     
     int k = 0, i = l, j = mid + 1;
-    while(i <= mid && j <= r) {
-        if (q[i] < q[j]) tmp[k++] = q[i++];
+    while(i <= mid && j <= r)
+        if (q[i] <= q[j]) tmp[k++] = q[i++];
         else tmp[k++] = q[j++];
-    }
+    
     while(i <= mid) tmp[k++] = q[i++];
-    while(j <= mid) tmp[k++] = q[j++];
+    while(j <= r) tmp[k++] = q[j++];
     
     for (i = l, j = 0; i <= r; i++, j++) q[i] = tmp[j];
+    
 }
 ```
 
@@ -92,12 +95,12 @@ a1 a2 a3 ... an
 
 ```c++
 void insert(int l, int r, int c)
-{
+{ // 构造差分数组
     b[l] += c;
     b[r + 1] -= c;
 }
 
-for (int i = 1; i <= n; i++) scanf("%d", a[i]);
+for (int i = 1; i <= n; i++) cin >> a[i];
 for (int i = 1; i <= n; i++) insert(i, i, a[i]);   // 构造差分数组
 
 while(m--) {   // m 次区间添加操作
@@ -111,7 +114,7 @@ for (int i = 1; i <= n; i++) b[i] += b[i - 1];  // b 数组变成自己的前缀
 
 ## 双指针
 
-> 把O(n^2)的时间复杂度优化到O(n)
+> 把$\mathrm{O}(\mathrm{n}^2)$的时间复杂度优化到$\mathrm{O}(\mathrm{n})$
 
 ```c++
 for (int i = 0, j = 0; i < n; i++) {
@@ -127,6 +130,8 @@ for (int i = 0, j = 0; i < n; i++) {
   ```c++
   lowbit(x) = x & -x = x & (~n + 1)
   ```
+  
+- 
 
 ## 离散化
 
@@ -438,7 +443,7 @@ size[find(b)] += szie[find(a)];
 p[find(a)] = find(b);
 ```
 
-维护到祖宗节点距离的并查集
+**维护到祖宗节点距离的并查集**
 
 ```c++
 int p[N], d[N];
