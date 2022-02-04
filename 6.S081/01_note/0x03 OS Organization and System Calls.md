@@ -162,20 +162,16 @@ ECALL会跳转到内核中一个特定，由内核控制的位置。(xv6 中存�
 
 ## 编译运行kernel
 
-介绍 xv6 是如何工作的。代码主要有三个部分组成：
+`xv6`代码主要分为三部分：
 
-- 第一个是kernel。`ls kernel` 的内容，里面包含了基本上所有的内核文件。因为XV6是一个宏内核结构，这里所有的文件会被编译成一个叫做kernel的二进制文件，然后这个二进制文件会被运行在 kernle mode 中。
+- `kernel` - 包含了基本上所有的内核文件。`xv6` 是宏内核的，这里所有的文件会被编译成一个叫做 `kernel` 的二进制文件，然后这个二进制文件会被运行在 `kernle mode` 中。
 
-- 第二个部分是user。这基本上是运行在user mode的程序。这也是为什么一个目录称为kernel，另一个目录称为user的原因。
-- 第三部分叫做mkfs。它会创建一个空的文件镜像，我们会将这个镜像存在磁盘上，这样我们就可以直接使用一个空的文件系统。
+- `user` - 基本是运行在 `user mode` 的程序。
+- `mkfs`  - 会创建一个空的文件镜像，这个镜像会存在磁盘上，这样就有一个可以直接使用的空的文件系统。
 
 **内核编译**
 
-- 首先，Makefile（XV6目录下的文件）会读取一个C文件，例如proc.c；之后调用gcc编译器，生成一个文件叫做proc.s，这是RISC-V 汇编语言文件；之后再走到汇编解释器，生成proc.o，这是汇编语言的二进制格式。
-- Makefile会为所有内核文件做相同的操作，比如说pipe.c，会按照同样的套路，先经过gcc编译成pipe.s，再通过汇编解释器生成pipe.o。
-- 之后，系统加载器（Loader）会收集所有的.o文件，将它们链接在一起，并生成内核文件。
-- 这里生成的内核文件就是我们将会在QEMU中运行的文件。
-- 同时，为了方便，Makefile还会创建kernel.asm，这里包含了内核的完整汇编语言，可以通过查看它来定位究竟是哪个指令导致了Bug。
+`Makefile` 会创建 `kernel.asm`（包含了内核的完整汇编），打开查看可以知道第一个指令地址位于 `0x80000000`，内核入口为 `_entry`
 
 `make qemu` 指令中传递给qemu的几个参数：
 
@@ -186,30 +182,122 @@ ECALL会跳转到内核中一个特定，由内核控制的位置。(xv6 中存�
 
 ## xv6 启动过程
 
-- 首先启动QEMU，并打开gdb。本质上来说QEMU内部有一个gdb server，当我们启动之后，QEMU会等待gdb客户端连接。
+1. 启动 `QEMU`，并打开 `gdb` - `make CPUS=1 qemu-gdb`
 
-`make CPUS=1 qemu-gdb`
+   >  `QEMU` 内部有一个 `gdb server` 支持 `gdb`，当我们启动之后，``QEMU` 会等待 `gdb` 客户端连接。
 
-我会在我的计算机上再启动一个gdb客户端，这里是一个RISC-V 64位Linux的gdb，有些同学的电脑可能是multi-arch或者其他版本的的gdb，但是基本上来说，这里的gdb是为RISC-V 64位处理器编译的。
+   ![image-20220204205724860](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204205724860.png)
 
-- 在连接上之后，我会在程序的入口处设置一个端点，因为我们知道这是QEMU会跳转到的第一个指令。
+2. 另起一个 `gdb` 客户端（这里是一个RISC-V 64位Linux的 `gdb`， 我的环境里是 `gdb-multiarch`），并在程序入口处打断点
 
-  > 设置完断点之后，我运行程序，可以发现代码并没有停在0x8000000（见3.7 kernel.asm中，0x80000000是程序的起始位置），而是停在了0x8000000a。
+   ![image-20220204211656566](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204211656566.png)
 
-  
+   这里提示了 `gdb` 内核的方式，在`~/.gdbinit`中加入 `add-auto-load-safe path /mng/d/linux/xv6-labs-2020/.gdbinit`，然后重新执行 `gdb-multiarch` 即可调试 `kernel`
 
-除了console之外，还有许多代码来做初始化
+   ![image-20220204213816545](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204213816545.png)
 
-- kinit：设置好页表分配器（page allocator）
-- kvminit：设置好虚拟内存，这是下节课的内容
-- kvminithart：打开页表，也是下节课的内容
-- processinit：设置好初始进程或者说设置好进程表单
-- trapinit/trapinithart：设置好user/kernel mode转换代码
-- plicinit/plicinithart：设置好中断控制器PLIC（Platform Level Interrupt Controller），我们后面在介绍中断的时候会详细的介绍这部分，这是我们用来与磁盘和console交互方式
-- binit：分配buffer cache
-- iinit：初始化inode缓存
-- fileinit：初始化文件系统
-- virtio_disk_init：初始化磁盘
-- userinit：最后当所有的设置都完成了，操作系统也运行起来了，会通过userinit运行第一个进程，这里有点意思，接下来我们看一下userinit
+   > 设置完断点之后，我运行程序，可以发现代码并没有停在 `0x8000000`（见 `kernel.asm` ，`0x80000000` 是程序的起始位置），而是停在了 `0x80000004`
+
+   **注意：** `0x80000000`  是一个被QEMU认可的地址，如果你想使用 `QEMU`，那么第一个指令地址必须是它。`xv6` 的内核加载器 `kernel.ld` 定义了内核如何被加载
+
+   ![image-20220204214014702](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204214014702.png)
+
+   这里可以看到内核使用的起始地址是 `QEMU` 指定的 `0x80000000` 这个地址。从这里也可以看到 `xv6` 是从 `entry.s` 开始启动，见下图
+
+   ![image-20220204214123489](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204214123489.png)
+
+   此时没有内存分页，隔离性，并且运行于 `M-mode`(machine mode)。`kernel` 会尽快跳转到 `kernel mode`（riscv 中也叫 `supervisor mode`）
+
+3. 进入 `kernel mode`
+
+   > 这里断住 `main` 函数（运行于 `kernel mode`）
+
+   ![image-20220204214230542](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204214230542.png)
+
+   `gdb` 下执行 `layout split` 可以看到具体执行到哪条语句，断点的位置。
+
+   ![image-20220204214350903](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204214350903.png)
+
+4. `main()` 做的初始化工作
+
+   ![image-20220204214757026](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204214757026.png)
+
+   `main` 完成操作系统的初始化工作，包括：
+
+   - `consoleinit` 初始化 `console` 并向 `console` 打印一些内容
+   - `kinit` 设置好页表分配器（page allocator）
+   - `kvminit` 设置好(内核)虚拟内存
+   - `kvminithart` 打开页表
+   - `procinit` 设置好进程表单（或者说设置好初始进程）
+   - `trapinit/trapinithart`  设置好 `user/kernel mode` 转换代码
+   - `plicinit/plicinithart` 设置好中断控制器PLIC（Platform Level Interrupt Controller）
+   - `binit `分配buffer cache
+   - `iinit` 初始化inode缓存
+   - `fileinit` 初始化文件系统
+   - `virtio_disk_init` 初始化磁盘
+   - `userinit` 最后当所有的设置都完成了，操作系统也运行起来了，会通过userinit运行第一个进程
+
+5. `userinit`
+
+   通过 `gdb` 的 `s` 指令跳转到 `userinit` 内部
+
+   ![image-20220204220033013](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204220033013.png)
+
+   ![image-20220204220113840](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204220113840.png)
+
+   上图是 `gdb` 试图，下图是 `userinit` 源码，`userinit` 有点像 `Glue code`(胶水代码，不实现具体功能，只为了适配不同部分)，它利用了 `xv6` 的特性，并启动了第一个进程。
+
+   > 我们总是需要有一个用户进程在运行才能实现与操作系统的交互，所以这里需要有一个小程序来初始化第一个用户进程，这个小程序定义在 `initcode` 中，它已经被二进制编码到程序中了，它会链接或者在内核中静态定义。
+
+   ![image-20220204220442123](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204220442123.png)
+
+   实际上这段代码对应了如下汇编程序
+
+   ![image-20220204220658489](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204220658489.png)
+
+   这段汇编程序首先将 `init` 的地址加载到 `a0` - `la a0, init`，`argv` 中的地址加载到 `a1` `la a1, argv`，`exec`  系统调用的数据加载到 `a7` - `li a7, SYS_exec`， 最后调用 `ecall` 将控制权限交给操作系统
+
+
+6. 系统调用 `syscall` 
+
+   在 `syscall` 设置断点，并运行。`userinit` 会创建初始进程，返回到用户空间，执行`5` 里说的 3 条指令，然后再回到内核空间。这里是 `xv6` 中任何用户都会使用到的第一个系统调用。
+
+   ![image-20220204221256885](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204221256885.png)
+
+   当前进入到 `syscall` 中，对应的代码如下
+
+   ![image-20220204221403498](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204221403498.png)
+
+   `num = p->trapframe->a7` 会读取使用的系统调用对应的整数，当代码执行完这行后可以在 `gdb` 中打印 `num`，得到结果如下
+
+   ![image-20220204221533491](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204221533491.png)
+
+   如果查看 `syscall.h` 可以看到对应是 `exec`
+
+   ![image-20220204221623573](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204221623573.png)
+
+   > 这里本事上是告诉内核，某个用户程序执行了 `ecall` 指令，并且想要调用 `exec` 系统调用
+
+   `p->trapframe->a0 = syscall[num]()` 执行了系统调用，可以预期`syscall[7]`对应了`exec`的入口函数，接下来就跳转到这个函数中
+
+   ![image-20220204221955356](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204221955356.png)
+
+   ![image-20220204222050569](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204222050569.png)
+
+   `sys_exec` 做的第一件事是从用户空间读取参数，他会读取 `path` 也就是要执行程序的文件名（这里先为参数分配空间，然后从用户空间将参数拷贝到内核空间），打印 `path`
+
+   ![image-20220204222420053](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204222420053.png)
+
+   可以看到，传入的是 `init` 程序。
+
+   综合来看，`initcode` 完成了通过 `exec` 调用 `init` 程序。
+
+7. `user/init.c`
+
+   ![image-20220204222907314](C:\Users\hzji2\AppData\Roaming\Typora\typora-user-images\image-20220204222907314.png)
+
+   `init`  会为用户空间设置好一些东西，比如配置好 `console`，调用 `fork`，并在 `fork` 出的子进程中执行 `shell`。
+
+ 
 
 上图是userinit函数，右边是源码，左边是gdb视图。userinit有点像是胶水代码/Glue code（胶水代码不实现具体的功能，只是为了适配不同的部分而存在），它利用了XV6的特性，并启动了第一个进程。**我们总是需要有一个用户进程在运行，这样才能实现与操作系统的交互，所以这里需要一个小程序来初始化第一个用户进程**。这个小程序定义在initcode中。
